@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>EVP+ | Suite de Producción & Base de Datos</title>
+  <!-- Google Fonts & FontAwesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root[data-theme="dark"] {
+      --bg-main: #0B0E17;
+      --bg-sidebar: #121824;
+      --bg-card: #1A202C;
+      --bg-card-hover: #222A3A;
+      --text-main: #FFFFFF;
+      --text-muted: #8A99AD;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --shadow-color: rgba(0, 0, 0, 0.35);
+      --accent-blue: #00E5FF;
+      --accent-pink: #FF2A75;
+      --excel-header: #2B6CB0;
+      --subtotal-bg: #2D3748;
+      --readonly-bg: #111622;
+    }
+
+    :root[data-theme="light"] {
+      --bg-main: #F4F6FB;
+      --bg-sidebar: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #EDF2F7;
+      --text-main: #1A202C;
+      --text-muted: #718096;
+      --border-color: #E2E8F0;
+      --shadow-color: rgba(0, 0, 0, 0.06);
+      --accent-blue: #0088FF;
+      --accent-pink: #E6005C;
+      --excel-header: #3182CE;
+      --subtotal-bg: #E2E8F0;
+      --readonly-bg: #EDF2F7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+    /* OCULTAR ELEMENTOS EXCLUSIVOS DE IMPRESIÓN EN LA VISTA WEB */
+    .print-only-header, .print-footer {
+      display: none !important;
+    }
+
+    /* PANTALLA DE LOGIN / PORTADA */
+    #loginOverlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--bg-main); z-index: 9999;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-card {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;
+      padding: 40px; width: 100%; max-width: 440px; box-shadow: 0 10px 30px var(--shadow-color);
+      text-align: center;
+    }
+    .login-logo { width: 120px; margin-bottom: 20px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.4)); }
+
+    .app-layout { display: flex; width: 100%; min-height: 100vh; position: relative; }
+
+    /* SIDEBAR */
+    sidebar {
+      width: 270px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color);
+      display: flex; flex-direction: column; padding: 22px; flex-shrink: 0; z-index: 1000;
+    }
+
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 999;
+    }
+
+    .brand-section { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+    .brand-group { display: flex; align-items: center; gap: 12px; }
+    .brand-logo-svg { width: 95px; height: auto; display: block; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.4)); }
+    .brand-text h2 { font-size: 13px; font-weight: 700; line-height: 1.2; }
+    .brand-text p { font-size: 11px; color: var(--text-muted); }
+    .close-mobile-btn { display: none; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+
+    .nav-menu { display: flex; flex-direction: column; gap: 6px; flex-grow: 1; overflow-y: auto; }
+    .nav-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin: 15px 0 5px 10px; letter-spacing: 1px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px;
+      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; min-height: 44px;
+    }
+    .nav-item:hover { background-color: var(--bg-card-hover); color: var(--text-main); }
+    .nav-item.active { background: linear-gradient(135deg, var(--accent-blue), #0077FF); color: #FFF; font-weight: 600; box-shadow: 0 4px 15px rgba(0,229,255,0.3); }
+
+    main { flex-grow: 1; padding: 25px 35px; width: calc(100% - 270px); }
+
+    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; }
+    .mobile-menu-btn { display: none; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); width: 44px; height: 44px; border-radius: 12px; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+
+    .user-badge-info {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 8px 14px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--accent-blue);
+    }
+
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
+
+    .nota-card {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
+      padding: 22px; box-shadow: 0 4px 15px var(--shadow-color); margin-bottom: 25px;
+    }
+
+    .nota-header-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;
+      background: var(--bg-main); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);
+    }
+
+    .header-field { display: flex; flex-direction: column; gap: 4px; }
+    .header-field label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .header-field .val { font-size: 16px; font-weight: 700; color: var(--accent-blue); }
+
+    .summary-bar { display: flex; gap: 20px; margin-top: 15px; flex-wrap: wrap; justify-content: flex-end; }
+    .summary-badge {
+      background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 10px 18px; display: flex; align-items: center; gap: 12px;
+    }
+    .summary-badge span { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .summary-badge strong { font-size: 18px; font-weight: 800; color: var(--accent-blue); }
+
+    .excel-table-container { width: 100%; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color); -webkit-overflow-scrolling: touch; }
+    table.excel-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+    table.excel-table th {
+      background-color: var(--excel-header); color: #FFFFFF; text-align: center;
+      padding: 10px 14px; font-weight: 600; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+      cursor: pointer; user-select: none;
+    }
+    table.excel-table th:hover { background-color: #1A4971; }
+    table.excel-table th .sort-icon { margin-left: 6px; font-size: 11px; opacity: 0.7; }
+    table.excel-table td { padding: 8px 10px; border: 1px solid var(--border-color); text-align: center; white-space: nowrap; }
+    table.excel-table tr.subtotal-row { background-color: var(--subtotal-bg); font-weight: 700; }
+    table.excel-table tr.total-row { background-color: var(--bg-sidebar); font-size: 15px; font-weight: 800; border-top: 2px solid var(--accent-blue); }
+
+    input.table-input, select.table-select {
+      width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color);
+      background: var(--bg-main); color: var(--text-main); font-size: 13px; outline: none; text-align: center;
+    }
+
+    input.readonly-input {
+      background-color: var(--readonly-bg) !important;
+      color: var(--text-muted) !important;
+      border: 1px dashed var(--border-color) !important;
+      font-weight: 600; cursor: not-allowed;
+    }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .form-group input, .form-group select {
+      padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+      background: var(--bg-main); color: var(--text-main); font-size: 13px; outline: none; min-height: 42px;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, var(--accent-blue), #0077FF); color: #FFF; border: none;
+      padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-height: 44px;
+    }
+    .btn-secondary {
+      background: var(--bg-card-hover); color: var(--text-main); border: 1px solid var(--border-color);
+      padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; min-height: 38px;
+    }
+
+    .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .color-presets { display: flex; gap: 10px; margin-top: 5px; }
+    .color-circle { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+    .color-circle.selected { border-color: #FFF; transform: scale(1.1); }
+
+    #loader { text-align: center; padding: 60px 0; color: var(--accent-blue); }
+
+    /* ESTILOS EXCLUSIVOS DE IMPRESIÓN (1 SOLA HOJA HORIZONTAL) */
+    @media print {
+      @page { size: landscape; margin: 8mm; }
+      sidebar, .mobile-menu-btn, .top-header, #tableFormItems, .summary-bar, form button, .form-grid, .print-hidden, h2, h3 {
+        display: none !important;
+      }
+      body { background: #FFFFFF !important; color: #000000 !important; font-family: Arial, sans-serif !important; }
+      .app-layout, main { display: block !important; padding: 0 !important; width: 100% !important; }
+      .nota-card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; background: transparent !important; }
+
+      /* SE MOSTRARÁN ÚNICAMENTE AL IMPRIMIR */
+      .print-only-header { display: block !important; width: 100%; margin-bottom: 10px; }
+      .print-header-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; margin-bottom: 8px; }
+      .print-company-info { text-align: center; width: 100%; font-size: 14px; font-weight: 800; color: #000; margin-bottom: 6px; line-height: 1.2; }
+      .print-logo-box { position: absolute; right: 0; top: -5px; text-align: center; }
+      .print-logo-box img, .print-logo-box svg { width: 95px; height: auto; }
+      .print-logo-box p { font-size: 8px; font-weight: 700; margin-top: 2px; color: #000; }
+      .print-meta-table { width: 60%; border-collapse: collapse; font-size: 10px; font-weight: 700; color: #000; }
+      .print-meta-table td { border: 1px solid #000 !important; padding: 3px 6px !important; text-align: left; }
+      .print-title-red { text-align: center; color: #E53E3E !important; font-size: 14px; font-weight: 900; margin: 8px 0; text-transform: uppercase; letter-spacing: 0.5px; -webkit-print-color-adjust: exact; }
+
+      #tableSubtotalesIngreso { width: 100% !important; border-collapse: collapse !important; font-size: 10px !important; }
+      #tableSubtotalesIngreso th, #tableSubtotalesIngreso td { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; padding: 4px !important; }
+      #tableSubtotalesIngreso th { background-color: #2B6CB0 !important; color: #FFF !important; -webkit-print-color-adjust: exact; text-transform: uppercase; text-align: center; }
+      #tableSubtotalesIngreso tr.subtotal-row { background-color: #EDF2F7 !important; font-weight: 800 !important; -webkit-print-color-adjust: exact; }
+      #tableSubtotalesIngreso tr.total-row { background-color: #CBD5E0 !important; font-weight: 900 !important; font-size: 11px !important; -webkit-print-color-adjust: exact; }
+
+      .print-footer { display: block !important; position: fixed; bottom: 10px; left: 0; width: 100%; }
+      .print-sign-container { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #000; text-transform: uppercase; padding: 0 10px; }
+    }
+
+    @media (max-width: 992px) {
+      sidebar { position: fixed; top: 0; left: -290px; height: 100vh; box-shadow: 5px 0 25px rgba(0,0,0,0.5); transition: left 0.3s ease; }
+      sidebar.active { left: 0; }
+      .sidebar-overlay.active { display: block; }
+      .close-mobile-btn { display: block; }
+      .mobile-menu-btn { display: flex; }
+      main { width: 100%; padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE INICIO DE SESIÓN / PORTADA -->
+  <div id="loginOverlay">
+    <div class="login-card">
+      <svg class="login-logo" viewBox="0 0 350 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="evpGradLogin" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FFF100" />
+            <stop offset="35%" stop-color="#FF9900" />
+            <stop offset="100%" stop-color="#CC0000" />
+          </linearGradient>
+        </defs>
+        <g transform="skewX(-14)">
+          <path d="M 20 20 L 105 20 L 98 48 L 51 48 L 47 68 L 88 68 L 82 94 L 41 94 L 35 125 L 115 125 L 108 153 L 2 153 Z" fill="url(#evpGradLogin)" stroke="#660000" stroke-width="2"/>
+          <path d="M 112 20 L 145 20 L 138 98 L 180 20 L 215 20 L 148 153 L 110 153 Z" fill="url(#evpGradLogin)" stroke="#660000" stroke-width="2"/>
+          <path d="M 210 20 L 275 20 C 310 20, 315 50, 295 85 C 280 110, 255 112, 235 112 L 218 112 L 210 153 L 182 153 Z M 238 46 L 258 46 C 272 46, 275 62, 266 75 C 258 88, 248 88, 232 88 L 228 88 Z" fill="url(#evpGradLogin)" stroke="#660000" stroke-width="2"/>
+          <path d="M 305 32 L 325 32 L 320 20 L 325 8 L 305 8 L 310 20 Z M 315 8 L 315 32 L 300 20 Z" fill="#FFFFFF" opacity="0.9"/>
+        </g>
+      </svg>
+      <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">ENVASES VILLA PET, C.A.</h2>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 25px;">Control de Producción & Almacén</p>
+      
+      <form onsubmit="iniciarSesion(event)">
+        <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+          <label>Departamento</label>
+          <select id="loginDepto" required>
+            <option value="Producción">Producción</option>
+            <option value="Control de Calidad">Control de Calidad</option>
+            <option value="Almacén">Almacén</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+          <label>Rol de Usuario</label>
+          <select id="loginRol" required>
+            <option value="Operador">Operador (Restringido)</option>
+            <option value="Administrador">Administrador (Total)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 25px; text-align: left;">
+          <label>Contraseña</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="loginClave" placeholder="Ingrese clave..." required style="width: 100%; padding-right: 40px;">
+            <button type="button" onclick="togglePasswordVisibility('loginClave', this)" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 5px;">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-action" style="width: 100%; justify-content: center;">
+          <i class="fas fa-right-to-bracket"></i> Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+  <datalist id="listArticulosNro"></datalist>
+
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <sidebar id="mainSidebar">
+      <div class="brand-section">
+        <div class="brand-group">
+          <svg class="brand-logo-svg" viewBox="0 0 350 160" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="evpGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FFF100" />
+                <stop offset="35%" stop-color="#FF9900" />
+                <stop offset="100%" stop-color="#CC0000" />
+              </linearGradient>
+            </defs>
+            <g transform="skewX(-14)">
+              <path d="M 20 20 L 105 20 L 98 48 L 51 48 L 47 68 L 88 68 L 82 94 L 41 94 L 35 125 L 115 125 L 108 153 L 2 153 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+              <path d="M 112 20 L 145 20 L 138 98 L 180 20 L 215 20 L 148 153 L 110 153 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+              <path d="M 210 20 L 275 20 C 310 20, 315 50, 295 85 C 280 110, 255 112, 235 112 L 218 112 L 210 153 L 182 153 Z M 238 46 L 258 46 C 272 46, 275 62, 266 75 C 258 88, 248 88, 232 88 L 228 88 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+              <path d="M 305 32 L 325 32 L 320 20 L 325 8 L 305 8 L 310 20 Z M 315 8 L 315 32 L 300 20 Z" fill="#FFFFFF" opacity="0.9"/>
+            </g>
+          </svg>
+          <div class="brand-text">
+            <h2>ENVASES VILLA PET, C.A.</h2>
+            <p>RIF: J-31208615-7</p>
+          </div>
+        </div>
+        <button class="close-mobile-btn" onclick="toggleMobileSidebar()"><i class="fas fa-xmark"></i></button>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-title">Operaciones</div>
+        <a class="nav-item active" onclick="switchView('nuevo-ingreso', this)">
+          <i class="fas fa-plus-circle"></i> Nuevo Ingreso
+        </a>
+        <a class="nav-item" onclick="switchView('vista-nota', this)">
+          <i class="fas fa-file-invoice"></i> Pestaña N°Nota
+        </a>
+
+        <div class="nav-title">Histórico & Datos</div>
+        <a class="nav-item" onclick="switchView('registros', this)">
+          <i class="fas fa-search"></i> Registro & Buscador
+        </a>
+        <a class="nav-item" onclick="switchView('base-datos', this)">
+          <i class="fas fa-database"></i> Base de Datos Artículos
+        </a>
+
+        <div class="nav-title">Sistema</div>
+        <a class="nav-item" onclick="switchView('vista-config', this)">
+          <i class="fas fa-cog"></i> Configuración
+        </a>
+        <a class="nav-item" onclick="cerrarSesion()" style="color: var(--accent-pink);">
+          <i class="fas fa-right-from-bracket"></i> Cerrar Sesión
+        </a>
+      </nav>
+    </sidebar>
+
+    <!-- MAIN -->
+    <main>
+      <div class="top-header">
+        <button class="mobile-menu-btn" onclick="toggleMobileSidebar()"><i class="fas fa-bars"></i></button>
+        <div>
+          <h1 id="panelTitle">Nuevo Ingreso</h1>
+          <p style="font-size:12px; color:var(--text-muted);">Control de Recepción de Producción EVP+</p>
+        </div>
+        <div class="user-badge-info" id="userBadgeDisplay">
+          <i class="fas fa-user-shield"></i> <span id="txtUserRole">Admin</span> (<span id="txtUserDept">Prod</span>)
+        </div>
+      </div>
+
+      <div id="loader">
+        <i class="fas fa-spinner fa-spin fa-3x"></i>
+        <p style="margin-top: 15px;">Cargando base de datos...</p>
+      </div>
+
+      <div id="appContent" style="display: none;">
+
+        <!-- 1. NUEVO INGRESO -->
+        <div id="view-nuevo-ingreso" class="view-panel active">
+          <div class="nota-card">
+
+            <!-- ENCABEZADO OFICIAL SOLO VISIBLE EN IMPRESIÓN -->
+            <div class="print-only-header">
+              <div class="print-company-info">
+                ENVASES VILLA PET, C.A.<br>
+                RIF.:J31208615-7
+              </div>
+
+              <div class="print-header-top">
+                <table class="print-meta-table">
+                  <tr>
+                    <td style="width: 35%;">FECHA PRODUCCION</td>
+                    <td id="prtFechaProd" style="width: 65%; text-align: center;">-</td>
+                  </tr>
+                  <tr>
+                    <td>TURNO PRODUCCION</td>
+                    <td id="prtTurnoProd" style="text-align: center;">Día</td>
+                  </tr>
+                  <tr>
+                    <td>FECHA ENTREGA</td>
+                    <td>
+                      <div style="display: flex; justify-content: space-between;">
+                        <span id="prtFechaEnt">-</span>
+                        <span id="prtHoraEnt">11:00:00 a. m.</span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>N°NOTA</td>
+                    <td id="prtNotaNum" style="text-align: center;">(Todas)</td>
+                  </tr>
+                </table>
+
+                <div class="print-logo-box">
+                  <svg class="brand-logo-svg" viewBox="0 0 350 160" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="skewX(-14)">
+                      <path d="M 20 20 L 105 20 L 98 48 L 51 48 L 47 68 L 88 68 L 82 94 L 41 94 L 35 125 L 115 125 L 108 153 L 2 153 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+                      <path d="M 112 20 L 145 20 L 138 98 L 180 20 L 215 20 L 148 153 L 110 153 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+                      <path d="M 210 20 L 275 20 C 310 20, 315 50, 295 85 C 280 110, 255 112, 235 112 L 218 112 L 210 153 L 182 153 Z M 238 46 L 258 46 C 272 46, 275 62, 266 75 C 258 88, 248 88, 232 88 L 228 88 Z" fill="url(#evpGrad)" stroke="#660000" stroke-width="2"/>
+                      <path d="M 305 32 L 325 32 L 320 20 L 325 8 L 305 8 L 310 20 Z M 315 8 L 315 32 L 300 20 Z" fill="#FFFFFF" opacity="0.9"/>
+                    </g>
+                  </svg>
+                  <p>ENVASES VILLA PET, C.A.<br>J-31208615-7</p>
+                </div>
+              </div>
+
+              <div class="print-title-red">
+                NOTA DE TRASLADO DE PRODUCCION AL ALMACEN
+              </div>
+            </div>
+
+            <!-- PIE DE PÁGINA CON ZONA DE FIRMAS (SOLO EN IMPRESIÓN) -->
+            <div class="print-footer">
+              <div class="print-sign-container">
+                <span>PRODUCCION: _______________________</span>
+                <span>C.CALIDAD: _______________________</span>
+                <span>ALMACEN: _______________________</span>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2><i class="fas fa-truck-ramp-box" style="color:var(--accent-blue);"></i> Registro de Ingreso de Producción</h2>
+              <span id="syncDraftStatus" style="font-size: 11px; color: var(--text-muted);"><i class="fas fa-bolt" style="color: var(--accent-blue);"></i> Optimizado & Ultra Rápido</span>
+            </div>
+            
+            <form id="ingresoForm" onsubmit="guardarIngreso(event)">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Fecha Producción</label>
+                  <input type="date" id="inputFechaProd" onchange="actualizarCamposImpresion(); guardarBorradorEnVivo();" required>
+                </div>
+                <div class="form-group">
+                  <label>Turno Producción</label>
+                  <select id="inputTurno" onchange="actualizarCamposImpresion(); guardarBorradorEnVivo();" required>
+                    <option value="Día">Día</option>
+                    <option value="Noche">Noche</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Fecha Entrega</label>
+                  <input type="date" id="inputFecha" onchange="actualizarCamposImpresion(); guardarBorradorEnVivo();" required>
+                </div>
+                <div class="form-group">
+                  <label>N° Nota</label>
+                  <input type="text" id="inputNota" oninput="actualizarCamposImpresion(); guardarBorradorEnVivo();" placeholder="Ej. 16129" required>
+                </div>
+                <div class="form-group">
+                  <label>Hora</label>
+                  <select id="inputHora" onchange="actualizarCamposImpresion(); guardarBorradorEnVivo();" required>
+                    <option value="07:00:00 a. m.">07:00:00 a. m.</option>
+                    <option value="11:00:00 a. m." selected>11:00:00 a. m.</option>
+                    <option value="03:00:00 p. m.">03:00:00 p. m.</option>
+                    <option value="04:30:00 p. m.">04:30:00 p. m.</option>
+                    <option value="07:00:00 p. m.">07:00:00 p. m.</option>
+                    <option value="11:00:00 p. m.">11:00:00 p. m.</option>
+                  </select>
+                </div>
+              </div>
+
+              <h3 style="margin: 20px 0 10px 0; font-size:15px;">Detalle de Producción</h3>
+              
+              <div class="excel-table-container" style="margin-bottom: 15px;">
+                <table class="excel-table" id="tableFormItems">
+                  <thead>
+                    <tr>
+                      <th onclick="sortFormTable(0)">N° <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(1)">PESO (KG) <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(2)">CANTIDAD <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(3)">CÓDIGO <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(4)">DESCRIPCIÓN <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(5)">ALMACÉN <i class="fas fa-sort sort-icon"></i></th>
+                      <th onclick="sortFormTable(6)">MOVIMIENTO <i class="fas fa-sort sort-icon"></i></th>
+                      <th>ACCIÓN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><input type="text" placeholder="122NG" class="row-nro table-input" list="listArticulosNro" oninput="buscarArticuloPorNro(this)" onchange="buscarArticuloPorNro(this)" style="width:100px;" required></td>
+                      <td><input type="text" placeholder="0" class="row-peso table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); }" style="width:110px;" required></td>
+                      <td><input type="text" placeholder="0" class="row-cant table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); }" style="width:110px;" required></td>
+                      <td><input type="text" placeholder="Código" class="row-cod table-input readonly-input" style="width:120px;" readonly></td>
+                      <td><input type="text" placeholder="Descripción" class="row-desc table-input readonly-input" style="width:230px;" readonly></td>
+                      <td><input type="text" value="PT" class="row-alm table-input readonly-input" style="width:70px;" readonly></td>
+                      <td>
+                        <select class="row-mov table-select" onchange="renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" style="width:110px;">
+                          <option value="ENT009">ENT009</option>
+                          <option value="ENT008">ENT008</option>
+                          <option value="ENT005">ENT005</option>
+                          <option value="ENT012">ENT012</option>
+                        </select>
+                      </td>
+                      <td><button type="button" class="btn-secondary" onclick="eliminarFila(this)"><i class="fas fa-trash"></i></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- BARRA DE TOTALES GENERALES -->
+              <div class="summary-bar">
+                <div class="summary-badge">
+                  <i class="fas fa-boxes-stacked" style="color:var(--accent-blue);"></i>
+                  <span>Total Cantidad:</span>
+                  <strong id="totCantIngreso">0,00</strong>
+                </div>
+                <div class="summary-badge">
+                  <i class="fas fa-weight-hanging" style="color:var(--accent-pink);"></i>
+                  <span>Total Peso (Kg):</span>
+                  <strong id="totPesoIngreso" style="color:var(--accent-pink);">0,00 Kg</strong>
+                </div>
+              </div>
+
+              <!-- BOTONES DE ACCIÓN -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0 10px 0; flex-wrap: wrap; gap: 10px;">
+                <button type="button" class="btn-secondary" onclick="agregarFila()"><i class="fas fa-plus"></i> Agregar Fila</button>
+                <button type="button" class="btn-action" onclick="imprimirReportePro()" style="background: linear-gradient(135deg, #38A169, #2F855A);"><i class="fas fa-print"></i> Imprimir Reporte</button>
+              </div>
+
+              <h3 style="margin: 15px 0 10px 0; font-size:15px; color:var(--accent-blue);"><i class="fas fa-layer-group"></i> Resumen de Subtotales y Totales por Código</h3>
+              
+              <div class="excel-table-container" style="margin-bottom: 20px;">
+                <table class="excel-table" id="tableSubtotalesIngreso">
+                  <thead>
+                    <tr>
+                      <th>MOVIMIENTO</th>
+                      <th>DESCRIPCIÓN</th>
+                      <th>ALMACÉN</th>
+                      <th>CÓDIGO</th>
+                      <th>UNIDAD</th>
+                      <th style="width: 50px;">✓</th>
+                      <th>CANTIDAD</th>
+                      <th>PESOS (KG)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bodySubtotalesIngreso">
+                    <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 15px;">Agregue elementos arriba para ver los subtotales en tiempo real.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- BOTÓN FINAL DE GUARDAR -->
+              <div style="display:flex; justify-content:flex-end; margin-top:20px;" class="print-hidden">
+                <button type="submit" class="btn-action"><i class="fas fa-save"></i> Guardar e Ingresar Nota</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. PESTAÑA N°NOTA -->
+        <div id="view-vista-nota" class="view-panel">
+          <div class="nota-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
+              <h2><i class="fas fa-file-invoice" style="color:var(--accent-blue);"></i> Pestaña N°Nota</h2>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label style="font-size:12px; font-weight:700;">N° NOTA:</label>
+                <select id="selectNotaNota" onchange="renderNotaView()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-main); color:var(--text-main); font-weight:700;"></select>
+              </div>
+            </div>
+
+            <div class="nota-header-grid">
+              <div class="header-field"><label>Turno Producción</label><span class="val" id="dispTurno">Día</span></div>
+              <div class="header-field"><label>Fecha Entrega</label><span class="val" id="dispFecha">-</span></div>
+              <div class="header-field"><label>N° Nota</label><span class="val" id="dispNota" style="color:var(--accent-pink); font-size:20px;">-</span></div>
+              <div class="header-field"><label>Hora</label><span class="val" id="dispHora">-</span></div>
+            </div>
+
+            <div id="containerNotaGuardadaAcciones" style="margin-bottom: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+              <button type="button" id="btnEditarNotaGuardada" class="btn-action" onclick="advertirOEditarNota()" style="background: linear-gradient(135deg, #DD6B20, #C05621);">
+                <i class="fas fa-edit"></i> Modificar Nota Guardada
+              </button>
+            </div>
+
+            <div class="excel-table-container">
+              <table class="excel-table" id="tableNotaView">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('tableNotaView', 0)">MOVIMIENTO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 1)">DESCRIPCION <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 2)">ALMACEN <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 3)">CODIGO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 4)">UNIDAD <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 5)">CANTIDAD <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableNotaView', 6)">PESOS <i class="fas fa-sort sort-icon"></i></th>
+                  </tr>
+                </thead>
+                <tbody id="bodyNotaTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. REGISTROS & BUSCADOR DINÁMICO -->
+        <div id="view-registros" class="view-panel">
+          <div class="nota-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+              <h2><i class="fas fa-search" style="color:var(--accent-blue);"></i> Registro & Buscador Dinámico</h2>
+              <input type="text" id="searchRegistrosInput" onkeyup="filtrarRegistrosDinamicamente()" placeholder="Buscar por Nota, Código, Descripción..." style="padding:10px 14px; border-radius:10px; border:1px solid var(--border-color); background:var(--bg-main); color:var(--text-main); width:100%; max-width:320px;">
+            </div>
+
+            <div class="excel-table-container">
+              <table class="excel-table" id="tableRegistrosView">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('tableRegistrosView', 0)">FECHA <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 1)">N° NOTA <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 2)">N° <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 3)">MOVIMIENTO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 4)">CÓDIGO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 5)">DESCRIPCIÓN <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 6)">ALMACÉN <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 7)">CANTIDAD <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableRegistrosView', 8)">PESO (KG) <i class="fas fa-sort sort-icon"></i></th>
+                  </tr>
+                </thead>
+                <tbody id="bodyRegistrosTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. BASE DE DATOS Y NUEVO CÓDIGO -->
+        <div id="view-base-datos" class="view-panel">
+          <div class="nota-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
+              <h2><i class="fas fa-database" style="color:var(--accent-blue);"></i> Catálogo Base de Datos Artículos</h2>
+              <button class="btn-action" onclick="alert('Disponible próximamente')"><i class="fas fa-plus"></i> Nuevo Código</button>
+            </div>
+
+            <div class="excel-table-container">
+              <table class="excel-table" id="tableBDView">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('tableBDView', 0)">N° <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 1)">CÓDIGO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 2)">DESCRIPCIÓN <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 3)">ALMACÉN <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 4)">UNIDAD <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 5)">ARMADO <i class="fas fa-sort sort-icon"></i></th>
+                    <th onclick="sortTable('tableBDView', 6)">MOVIMIENTO <i class="fas fa-sort sort-icon"></i></th>
+                    <th>ACCIÓN</th>
+                  </tr>
+                </thead>
+                <tbody id="bodyBDTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. CONFIGURACIÓN COMPLETA -->
+        <div id="view-vista-config" class="view-panel">
+          <div class="config-grid">
+            <div class="nota-card">
+              <h3><i class="fas fa-palette"></i> Apariencia & Tema</h3>
+              <div class="form-group" style="margin-top:15px;">
+                <label>Modo de Pantalla</label>
+                <select id="cfgThemeSelect" onchange="document.documentElement.setAttribute('data-theme', this.value)">
+                  <option value="dark">Modo Oscuro (Dark Neon)</option>
+                  <option value="light">Modo Claro (Clean Light)</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-top:15px;">
+                <label>Color Primario de la Interfaz</label>
+                <div class="color-presets">
+                  <div class="color-circle selected" style="background:#00E5FF;" onclick="setPrimaryColor('#00E5FF', this)"></div>
+                  <div class="color-circle" style="background:#FF2A75;" onclick="setPrimaryColor('#FF2A75', this)"></div>
+                  <div class="color-circle" style="background:#FFC107;" onclick="setPrimaryColor('#FFC107', this)"></div>
+                  <div class="color-circle" style="background:#9D4EDD;" onclick="setPrimaryColor('#9D4EDD', this)"></div>
+                  <div class="color-circle" style="background:#00E676;" onclick="setPrimaryColor('#00E676', this)"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TARJETA DE SEGURIDAD Y CAMBIO DE CLAVE BLINDADA -->
+            <div class="nota-card">
+              <h3><i class="fas fa-key" style="color: var(--accent-blue);"></i> Seguridad & Cambio de Clave</h3>
+              <form onsubmit="actualizarPasswordWeb(event)" style="margin-top: 15px;">
+                <div class="form-group" style="margin-bottom: 12px; text-align: left;">
+                  <label>Rol a Modificar</label>
+                  <select id="cfgRolPass" required>
+                    <option value="Administrador">Administrador</option>
+                    <option value="Operador">Operador</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px; text-align: left;">
+                  <label>Contraseña Vieja (Actual)</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" id="cfgOldPass" placeholder="Ingrese clave actual..." required style="width: 100%; padding-right: 40px;">
+                    <button type="button" onclick="togglePasswordVisibility('cfgOldPass', this)" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 5px;">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+                  <label>Contraseña Nueva</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" id="cfgNewPass" placeholder="Ingrese nueva clave..." required style="width: 100%; padding-right: 40px;">
+                    <button type="button" onclick="togglePasswordVisibility('cfgNewPass', this)" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 5px;">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" class="btn-action" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #38A169, #2F855A);">
+                  <i class="fas fa-lock"></i> Actualizar Contraseña
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- SCRIPT COMPLETO CON VISIBILITY API, SMART DIFF Y VISIBILIDAD DE CONTRASEÑA -->
+  <script>
+    let rawRegistros = [];
+    let rawArticulos = [];
+    let sortDirections = {};
+    let formSortDirections = {};
+    let usuarioActual = { depto: '', rol: '' };
+    let isRemoteUpdating = false;
+    let lastRemoteDraftHash = '';
+    let draftSaveTimer = null;
+
+    function getStoredPassword(rol) {
+      if (rol === 'Administrador') {
+        return localStorage.getItem('evp_pass_admin') || 'admin2026';
+      } else {
+        return localStorage.getItem('evp_pass_operador') || 'op2026';
+      }
+    }
+
+    function setStoredPassword(rol, nuevaClave) {
+      if (rol === 'Administrador') {
+        localStorage.setItem('evp_pass_admin', nuevaClave);
+      } else {
+        localStorage.setItem('evp_pass_operador', nuevaClave);
+      }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const icon = btn.querySelector('i');
+      
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        btn.style.color = "var(--accent-blue)";
+      } else {
+        input.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+        btn.style.color = "var(--text-muted)";
+      }
+    }
+
+    function actualizarPasswordWeb(event) {
+      event.preventDefault();
+      const rol = usuarioActual.rol === 'Operador' ? 'Operador' : document.getElementById('cfgRolPass').value;
+      const oldPass = document.getElementById('cfgOldPass').value.trim();
+      const newPass = document.getElementById('cfgNewPass').value.trim();
+
+      const passActual = getStoredPassword(rol);
+
+      if (oldPass !== passActual) {
+        alert("Error: La contraseña vieja (actual) es incorrecta.");
+        return;
+      }
+
+      if (newPass.length < 4) {
+        alert("Error: La nueva contraseña debe tener al menos 4 caracteres.");
+        return;
+      }
+
+      setStoredPassword(rol, newPass);
+      alert(`¡Contraseña del rol ${rol} actualizada exitosamente!`);
+      document.getElementById('cfgOldPass').value = '';
+      document.getElementById('cfgNewPass').value = '';
+    }
+
+    function iniciarSesion(event) {
+      event.preventDefault();
+      const depto = document.getElementById('loginDepto').value;
+      const rol = document.getElementById('loginRol').value;
+      const clave = document.getElementById('loginClave').value.trim();
+
+      const passValida = getStoredPassword(rol);
+
+      if (clave !== passValida) {
+        alert(`Contraseña incorrecta para el rol de ${rol}.`);
+        return;
+      }
+
+      usuarioActual = { depto, rol };
+      document.getElementById('txtUserRole').innerText = rol;
+      document.getElementById('txtUserDept').innerText = depto;
+
+      const cfgRolSelect = document.getElementById('cfgRolPass');
+      cfgRolSelect.value = rol;
+      if (rol === 'Operador') {
+        cfgRolSelect.disabled = true;
+      } else {
+        cfgRolSelect.disabled = false;
+      }
+
+      document.getElementById('loginOverlay').style.display = 'none';
+      aplicarRestriccionesDeRol();
+
+      const hoy = new Date().toISOString().split('T')[0];
+      document.getElementById('inputFechaProd').value = hoy;
+      document.getElementById('inputFecha').value = hoy;
+      actualizarCamposImpresion();
+      cargarDatosServidor();
+
+      // POLLING INTELIGENTE CON PAUSA AUTOMÁTICA EN SEGUNDO PLANO
+      setInterval(() => {
+        if (document.hidden) return;
+        sincronizarBorradorRemoto();
+      }, 5000);
+
+      setInterval(() => {
+        if (document.hidden) return;
+        sincronizarRegistrosCompletos();
+      }, 15000);
+    }
+
+    function cerrarSesion() {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('loginClave').value = '';
+    }
+
+    function aplicarRestriccionesDeRol() {
+      const btnModificar = document.getElementById('btnEditarNotaGuardada');
+      if (usuarioActual.rol === 'Operador') {
+        if (btnModificar) {
+          btnModificar.style.opacity = '0.5';
+          btnModificar.title = 'Acceso restringido para Operadores';
+        }
+      } else {
+        if (btnModificar) {
+          btnModificar.style.opacity = '1';
+          btnModificar.title = 'Modificar nota guardada';
+        }
+      }
+    }
+
+    function advertirOEditarNota() {
+      if (usuarioActual.rol === 'Operador') {
+        alert("Acceso Denegado: Su usuario con rol de Operador no tiene permisos para modificar notas ya guardadas en el sistema. Contacte a un Administrador.");
+        return;
+      }
+      alert("Habilitado para modificar la nota seleccionada.");
+    }
+
+    function guardarBorradorEnVivo() {
+      if (isRemoteUpdating) return;
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => {
+        const items = [];
+        document.querySelectorAll('#tableFormItems tbody tr').forEach(tr => {
+          items.push({
+            nro: tr.querySelector('.row-nro').value,
+            peso: tr.querySelector('.row-peso').value,
+            cant: tr.querySelector('.row-cant').value,
+            cod: tr.querySelector('.row-cod').value,
+            desc: tr.querySelector('.row-desc').value,
+            alm: tr.querySelector('.row-alm').value,
+            mov: tr.querySelector('.row-mov').value
+          });
+        });
+
+        const draftPayload = {
+          turno: document.getElementById('inputTurno').value,
+          fechaProd: document.getElementById('inputFechaProd').value,
+          fechaEnt: document.getElementById('inputFecha').value,
+          nota: document.getElementById('inputNota').value,
+          hora: document.getElementById('inputHora').value,
+          items: items
+        };
+
+        google.script.run.guardarBorradorServidor(draftPayload);
+      }, 800);
+    }
+
+    function sincronizarBorradorRemoto() {
+      if (!document.getElementById('view-nuevo-ingreso').classList.contains('active')) return;
+
+      google.script.run
+        .withSuccessHandler(function(draft) {
+          if (!draft || !draft.items) return;
+          const currentHash = JSON.stringify(draft);
+          if (currentHash === lastRemoteDraftHash) return;
+          lastRemoteDraftHash = currentHash;
+          
+          isRemoteUpdating = true;
+          if (draft.turno) document.getElementById('inputTurno').value = draft.turno;
+          if (draft.fechaProd) document.getElementById('inputFechaProd').value = draft.fechaProd;
+          if (draft.fechaEnt) document.getElementById('inputFecha').value = draft.fechaEnt;
+          if (draft.nota) document.getElementById('inputNota').value = draft.nota;
+          if (draft.hora) document.getElementById('inputHora').value = draft.hora;
+
+          const tbody = document.querySelector('#tableFormItems tbody');
+          if (tbody.rows.length !== draft.items.length) {
+            tbody.innerHTML = '';
+            draft.items.forEach(it => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td><input type="text" value="${it.nro || ''}" class="row-nro table-input" list="listArticulosNro" oninput="buscarArticuloPorNro(this); guardarBorradorEnVivo();" onchange="buscarArticuloPorNro(this); guardarBorradorEnVivo();" style="width:100px;" required></td>
+                <td><input type="text" value="${it.peso || ''}" class="row-peso table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+                <td><input type="text" value="${it.cant || ''}" class="row-cant table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+                <td><input type="text" value="${it.cod || ''}" placeholder="Código" class="row-cod table-input readonly-input" style="width:120px;" readonly></td>
+                <td><input type="text" value="${it.desc || ''}" placeholder="Descripción" class="row-desc table-input readonly-input" style="width:230px;" readonly></td>
+                <td><input type="text" value="${it.alm || 'PT'}" class="row-alm table-input readonly-input" style="width:70px;" readonly></td>
+                <td>
+                  <select class="row-mov table-select" onchange="renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" style="width:110px;">
+                    <option value="ENT009" ${it.mov==='ENT009'?'selected':''}>ENT009</option>
+                    <option value="ENT008" ${it.mov==='ENT008'?'selected':''}>ENT008</option>
+                    <option value="ENT005" ${it.mov==='ENT005'?'selected':''}>ENT005</option>
+                    <option value="ENT012" ${it.mov==='ENT012'?'selected':''}>ENT012</option>
+                  </select>
+                </td>
+                <td><button type="button" class="btn-secondary" onclick="eliminarFila(this); guardarBorradorEnVivo();"><i class="fas fa-trash"></i></button></td>
+              `;
+              tbody.appendChild(tr);
+            });
+            calcularTotalesIngreso();
+            renderSubtotalesNuevoIngreso();
+            actualizarCamposImpresion();
+          }
+          isRemoteUpdating = false;
+        })
+        .getBorradorServidor();
+    }
+
+    function sincronizarRegistrosCompletos() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          rawRegistros = res.registros || [];
+          rawArticulos = res.articulos || [];
+          
+          const selNota = document.getElementById('selectNotaNota');
+          const notaActual = selNota.value;
+          const notasUnicas = [...new Set(rawRegistros.map(r => r.nota))].filter(Boolean);
+          
+          selNota.innerHTML = '<option value="">-- Seleccione Nota --</option>';
+          notasUnicas.forEach(nota => {
+            selNota.innerHTML += `<option value="${nota}" ${nota === notaActual ? 'selected' : ''}>${nota}</option>`;
+          });
+
+          const searchInput = document.getElementById('searchRegistrosInput');
+          if (searchInput && searchInput.value.trim() !== '') {
+            filtrarRegistrosDinamicamente();
+          }
+          if (notaActual) {
+            renderNotaView();
+          }
+        })
+        .getProduccionData();
+    }
+
+    function actualizarCamposImpresion() {
+      const fechaProdVal = document.getElementById('inputFechaProd').value;
+      if (fechaProdVal) {
+        const p = fechaProdVal.split('-');
+        const dObj = new Date(p[0], p[1] - 1, p[2]);
+        document.getElementById('prtFechaProd').innerText = dObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        document.getElementById('prtFechaProd').innerText = '-';
+      }
+
+      const fechaEntVal = document.getElementById('inputFecha').value;
+      if (fechaEntVal) {
+        const partes = fechaEntVal.split('-');
+        const dateObj = new Date(partes[0], partes[1] - 1, partes[2]);
+        document.getElementById('prtFechaEnt').innerText = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        document.getElementById('prtFechaEnt').innerText = '-';
+      }
+
+      document.getElementById('prtTurnoProd').innerText = document.getElementById('inputTurno').value;
+      document.getElementById('prtHoraEnt').innerText = document.getElementById('inputHora').value;
+      const notaVal = document.getElementById('inputNota').value.trim();
+      document.getElementById('prtNotaNum').innerText = notaVal !== '' ? notaVal : '(Todas)';
+    }
+
+    function imprimirReportePro() {
+      actualizarCamposImpresion();
+      window.print();
+    }
+
+    function cargarDatosServidor() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          rawRegistros = res.registros || [];
+          rawArticulos = res.articulos || [];
+          
+          const datalist = document.getElementById('listArticulosNro');
+          datalist.innerHTML = '';
+          rawArticulos.forEach(art => {
+            datalist.innerHTML += `<option value="${art.nro}">${art.codigo} - ${art.descripcion}</option>`;
+          });
+
+          const notasUnicas = [...new Set(rawRegistros.map(r => r.nota))].filter(Boolean);
+          const selNota = document.getElementById('selectNotaNota');
+          
+          selNota.innerHTML = '<option value="">-- Seleccione Nota --</option>';
+          notasUnicas.forEach(nota => {
+            selNota.innerHTML += `<option value="${nota}">${nota}</option>`;
+          });
+
+          renderRegistrosTable();
+          renderBDTable();
+
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('appContent').style.display = 'block';
+        })
+        .withFailureHandler(function(err) {
+          alert("Error al cargar datos: " + err.message);
+        })
+        .getProduccionData();
+    }
+
+    function switchView(viewId, el) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      
+      document.getElementById('view-' + viewId).classList.add('active');
+      if (el) el.classList.add('active');
+
+      const titles = {
+        'nuevo-ingreso': 'Nuevo Ingreso',
+        'vista-nota': 'Pestaña N°Nota',
+        'registros': 'Registro & Buscador',
+        'base-datos': 'Base de Datos Artículos',
+        'vista-config': 'Configuración'
+      };
+      document.getElementById('panelTitle').innerText = titles[viewId] || 'EVP+';
+      toggleMobileSidebar(true);
+    }
+
+    function toggleMobileSidebar(forceClose = false) {
+      const sidebar = document.getElementById('mainSidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (forceClose) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+      } else {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+      }
+    }
+
+    function agregarFila() {
+      const tbody = document.querySelector('#tableFormItems tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" placeholder="122NG" class="row-nro table-input" list="listArticulosNro" oninput="buscarArticuloPorNro(this); guardarBorradorEnVivo();" onchange="buscarArticuloPorNro(this); guardarBorradorEnVivo();" style="width:100px;" required></td>
+        <td><input type="text" placeholder="0" class="row-peso table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+        <td><input type="text" placeholder="0" class="row-cant table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+        <td><input type="text" placeholder="Código" class="row-cod table-input readonly-input" style="width:120px;" readonly></td>
+        <td><input type="text" placeholder="Descripción" class="row-desc table-input readonly-input" style="width:230px;" readonly></td>
+        <td><input type="text" value="PT" class="row-alm table-input readonly-input" style="width:70px;" readonly></td>
+        <td>
+          <select class="row-mov table-select" onchange="renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" style="width:110px;">
+            <option value="ENT009">ENT009</option>
+            <option value="ENT008">ENT008</option>
+            <option value="ENT005">ENT005</option>
+            <option value="ENT012">ENT012</option>
+          </select>
+        </td>
+        <td><button type="button" class="btn-secondary" onclick="eliminarFila(this); guardarBorradorEnVivo();"><i class="fas fa-trash"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+      guardarBorradorEnVivo();
+    }
+
+    function eliminarFila(btn) {
+      const tr = btn.closest('tr');
+      const tbody = tr.parentNode;
+      if (tbody.rows.length > 1) {
+        tr.remove();
+        calcularTotalesIngreso();
+        renderSubtotalesNuevoIngreso();
+      } else {
+        alert("Debe mantener al menos una fila.");
+      }
+    }
+
+    function buscarArticuloPorNro(input) {
+      const val = input.value.trim().toUpperCase();
+      const tr = input.closest('tr');
+      const art = rawArticulos.find(a => String(a.nro).trim().toUpperCase() === val || String(a.codigo).trim().toUpperCase() === val);
+
+      if (art) {
+        tr.querySelector('.row-cod').value = art.codigo;
+        tr.querySelector('.row-desc').value = art.descripcion;
+        tr.querySelector('.row-alm').value = art.almacen;
+        tr.querySelector('.row-mov').value = art.movimiento;
+        if (art.armado !== undefined && art.armado !== null && !isNaN(art.armado)) {
+          tr.querySelector('.row-cant').value = art.armado;
+        } else {
+          tr.querySelector('.row-cant').value = 0;
+        }
+      } else {
+        tr.querySelector('.row-cod').value = '';
+        tr.querySelector('.row-desc').value = '';
+        tr.querySelector('.row-alm').value = 'PT';
+        tr.querySelector('.row-cant').value = 0;
+      }
+      calcularTotalesIngreso();
+      renderSubtotalesNuevoIngreso();
+      guardarBorradorEnVivo();
+    }
+
+    function evaluarEcuacionInput(input) {
+      try {
+        let val = input.value.trim();
+        if (val.startsWith('=')) {
+          val = val.substring(1);
+        }
+        if (val) {
+          let res = eval(val.replace(/[^0-9+\-*/().]/g, ''));
+          if (!isNaN(res)) {
+            input.value = res;
+          }
+        }
+      } catch(e) {}
+      calcularTotalesIngreso();
+      renderSubtotalesNuevoIngreso();
+      guardarBorradorEnVivo();
+    }
+
+    function calcularTotalesIngreso() {
+      let totalCant = 0;
+      let totalPeso = 0;
+      document.querySelectorAll('#tableFormItems tbody tr').forEach(tr => {
+        totalCant += parseFloat(tr.querySelector('.row-cant').value) || 0;
+        totalPeso += parseFloat(tr.querySelector('.row-peso').value) || 0;
+      });
+      document.getElementById('totCantIngreso').innerText = totalCant.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      document.getElementById('totPesoIngreso').innerText = totalPeso.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' Kg';
+    }
+
+    function sortFormTable(colIdx) {
+      const tbody = document.querySelector('#tableFormItems tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      formSortDirections[colIdx] = !formSortDirections[colIdx];
+      const asc = formSortDirections[colIdx];
+
+      rows.sort((a, b) => {
+        let valA = '', valB = '';
+        if (colIdx === 6) {
+          valA = a.cells[colIdx].querySelector('select').value.trim();
+          valB = b.cells[colIdx].querySelector('select').value.trim();
+        } else {
+          valA = a.cells[colIdx].querySelector('input').value.trim();
+          valB = b.cells[colIdx].querySelector('input').value.trim();
+        }
+
+        const numA = parseFloat(valA.replace(/\./g, '').replace(',', '.'));
+        const numB = parseFloat(valB.replace(/\./g, '').replace(',', '.'));
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return asc ? numA - numB : numB - numA;
+        }
+        return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      rows.forEach(r => tbody.appendChild(r));
+      renderSubtotalesNuevoIngreso();
+    }
+
+    function toggleGroupCheckboxes(master) {
+      const groupClass = master.getAttribute('data-group');
+      const checkboxes = document.querySelectorAll('.' + groupClass);
+      checkboxes.forEach(cb => {
+        cb.checked = master.checked;
+      });
+    }
+
+    function renderSubtotalesNuevoIngreso() {
+      const tbody = document.getElementById('bodySubtotalesIngreso');
+      tbody.innerHTML = '';
+
+      const filas = document.querySelectorAll('#tableFormItems tbody tr');
+      const itemsTemp = [];
+
+      filas.forEach(tr => {
+        const movimiento = tr.querySelector('.row-mov').value;
+        const descripcion = tr.querySelector('.row-desc').value.trim();
+        const almacen = tr.querySelector('.row-alm').value.trim();
+        const codigo = tr.querySelector('.row-cod').value.trim();
+        const cantidad = parseFloat(tr.querySelector('.row-cant').value) || 0;
+        const peso = parseFloat(tr.querySelector('.row-peso').value) || 0;
+
+        if (codigo) {
+          itemsTemp.push({ movimiento, descripcion, almacen, codigo, unidad: 'UND', cantidad, peso });
+        }
+      });
+
+      if (itemsTemp.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding: 15px;">Agregue elementos arriba para ver los subtotales en tiempo real.</td></tr>';
+        return;
+      }
+
+      const agrupado = {};
+      itemsTemp.forEach(item => {
+        const key = `${item.codigo}_${item.descripcion}`;
+        if (!agrupado[key]) {
+          agrupado[key] = {
+            movimiento: item.movimiento,
+            codigo: item.codigo,
+            descripcion: item.descripcion,
+            almacen: item.almacen,
+            unidad: item.unidad,
+            items: [],
+            cantidadTotal: 0,
+            pesoTotal: 0
+          };
+        }
+        agrupado[key].items.push(item);
+        agrupado[key].cantidadTotal += item.cantidad;
+        agrupado[key].pesoTotal += item.peso;
+      });
+
+      let totalGenCant = 0;
+      let totalGenPeso = 0;
+      let groupIndex = 0;
+
+      for (let k in agrupado) {
+        const grupo = agrupado[k];
+        totalGenCant += grupo.cantidadTotal;
+        totalGenPeso += grupo.pesoTotal;
+        const groupClass = `group-item-${groupIndex++}`;
+
+        grupo.items.forEach(it => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${it.movimiento}</td>
+              <td style="text-align:left;">${it.descripcion}</td>
+              <td>${it.almacen}</td>
+              <td>${it.codigo}</td>
+              <td>${it.unidad}</td>
+              <td><input type="checkbox" class="item-checkbox ${groupClass}" style="cursor: pointer; transform: scale(1.2);" title="Validar ítem"></td>
+              <td style="text-align:right;">${it.cantidad.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td style="text-align:right;">${it.peso.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML += `
+          <tr class="subtotal-row">
+            <td colspan="5" style="text-align:right;">Total ${grupo.descripcion}:</td>
+            <td>
+              <input type="checkbox" class="subtotal-checkbox" data-group="${groupClass}" onchange="toggleGroupCheckboxes(this)" style="cursor: pointer; transform: scale(1.3);" title="Marcar todo el grupo">
+            </td>
+            <td style="text-align:right;">${grupo.cantidadTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td style="text-align:right;">${grupo.pesoTotal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          </tr>
+        `;
+      }
+
+      tbody.innerHTML += `
+        <tr class="total-row">
+          <td colspan="6" style="text-align:right;">TOTAL GENERAL:</td>
+          <td style="text-align:right;">${totalGenCant.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          <td style="text-align:right;">${totalGenPeso.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        </tr>
+      `;
+    }
+
+    function guardarIngreso(event) {
+      event.preventDefault();
+      const items = [];
+      let valido = true;
+
+      document.querySelectorAll('#tableFormItems tbody tr').forEach(tr => {
+        const nro = tr.querySelector('.row-nro').value.trim();
+        const peso = parseFloat(tr.querySelector('.row-peso').value) || 0;
+        const cantidad = parseFloat(tr.querySelector('.row-cant').value) || 0;
+        const codigo = tr.querySelector('.row-cod').value.trim();
+        const descripcion = tr.querySelector('.row-desc').value.trim();
+        const almacen = tr.querySelector('.row-alm').value.trim();
+        const movimiento = tr.querySelector('.row-mov').value;
+
+        if (!codigo) {
+          valido = false;
+          return;
+        }
+
+        items.push({ nro, peso, cantidad, codigo, descripcion, almacen, movimiento });
+      });
+
+      if (!valido || items.length === 0) {
+        alert("Por favor complete correctamente los artículos verificando que el código exista.");
+        return;
+      }
+
+      const payload = {
+        turno: document.getElementById('inputTurno').value,
+        fecha: document.getElementById('inputFecha').value,
+        nota: document.getElementById('inputNota').value.trim(),
+        hora: document.getElementById('inputHora').value,
+        items: items
+      };
+
+      const btn = event.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            alert(`¡Éxito! Se registraron ${res.count} ítems para la nota ${res.nota}`);
+            document.getElementById('ingresoForm').reset();
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('inputFechaProd').value = hoy;
+            document.getElementById('inputFecha').value = hoy;
+            document.querySelector('#tableFormItems tbody').innerHTML = `
+              <tr>
+                <td><input type="text" placeholder="122NG" class="row-nro table-input" list="listArticulosNro" oninput="buscarArticuloPorNro(this); guardarBorradorEnVivo();" onchange="buscarArticuloPorNro(this); guardarBorradorEnVivo();" style="width:100px;" required></td>
+                <td><input type="text" placeholder="0" class="row-peso table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+                <td><input type="text" placeholder="0" class="row-cant table-input" onchange="evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" onkeyup="if(event.key==='Enter'){ evaluarEcuacionInput(this); renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo(); }" style="width:110px;" required></td>
+                <td><input type="text" placeholder="Código" class="row-cod table-input readonly-input" style="width:120px;" readonly></td>
+                <td><input type="text" placeholder="Descripción" class="row-desc table-input readonly-input" style="width:230px;" readonly></td>
+                <td><input type="text" value="PT" class="row-alm table-input readonly-input" style="width:70px;" readonly></td>
+                <td>
+                  <select class="row-mov table-select" onchange="renderSubtotalesNuevoIngreso(); guardarBorradorEnVivo();" style="width:110px;">
+                    <option value="ENT009">ENT009</option><option value="ENT008">ENT008</option><option value="ENT005">ENT005</option><option value="ENT012">ENT012</option>
+                  </select>
+                </td>
+                <td><button type="button" class="btn-secondary" onclick="eliminarFila(this); guardarBorradorEnVivo();"><i class="fas fa-trash"></i></button></td>
+              </tr>
+            `;
+            calcularTotalesIngreso();
+            renderSubtotalesNuevoIngreso();
+            actualizarCamposImpresion();
+            cargarDatosServidor();
+            guardarBorradorEnVivo();
+          } else {
+            alert("Error al guardar: " + res.error);
+          }
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Guardar e Ingresar Nota';
+        })
+        .withFailureHandler(function(err) {
+          alert("Error de comunicación: " + err.message);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Guardar e Ingresar Nota';
+        })
+        .guardarNuevoIngreso(payload);
+    }
+
+    function renderNotaView() {
+      const notaSel = document.getElementById('selectNotaNota').value;
+      const tbody = document.getElementById('bodyNotaTable');
+      tbody.innerHTML = '';
+
+      if (!notaSel) {
+        document.getElementById('dispFecha').innerText = '-';
+        document.getElementById('dispNota').innerText = '-';
+        document.getElementById('dispHora').innerText = '-';
+        return;
+      }
+
+      const items = rawRegistros.filter(r => String(r.nota).trim() === String(notaSel).trim());
+      if (items.length > 0) {
+        document.getElementById('dispFecha').innerText = items[0].fecha;
+        document.getElementById('dispNota').innerText = items[0].nota;
+        document.getElementById('dispHora').innerText = items[0].hora;
+        document.getElementById('dispTurno').innerText = items[0].turno || 'Día';
+      }
+
+      items.forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.movimiento}</td>
+            <td>${item.descripcion}</td>
+            <td>${item.almacen}</td>
+            <td>${item.codigo}</td>
+            <td>${item.unidad}</td>
+            <td style="text-align:right;">${item.cantidad.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td style="text-align:right;">${item.peso.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderRegistrosTable() {
+      const tbody = document.getElementById('bodyRegistrosTable');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding: 25px;">Usa la barra de búsqueda superior para consultar registros históricos.</td></tr>';
+    }
+
+    function filtrarRegistrosDinamicamente() {
+      const filtro = document.getElementById('searchRegistrosInput').value.toLowerCase().trim();
+      const tbody = document.getElementById('bodyRegistrosTable');
+      tbody.innerHTML = '';
+
+      if (filtro === '') {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding: 25px;">Escribe un criterio de búsqueda (Nota, Código, Descripción) para mostrar resultados.</td></tr>';
+        return;
+      }
+
+      const filtrados = rawRegistros.filter(r => 
+        String(r.nota).toLowerCase().includes(filtro) ||
+        String(r.codigo).toLowerCase().includes(filtro) ||
+        String(r.descripcion).toLowerCase().includes(filtro) ||
+        String(r.movimiento).toLowerCase().includes(filtro)
+      );
+
+      if (filtrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding: 25px;">No se encontraron registros que coincidan con la búsqueda.</td></tr>';
+        return;
+      }
+
+      filtrados.forEach(r => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${r.fecha}</td>
+            <td><strong>${r.nota}</strong></td>
+            <td>${r.nro}</td>
+            <td>${r.movimiento}</td>
+            <td>${r.codigo}</td>
+            <td style="text-align:left;">${r.descripcion}</td>
+            <td>${r.almacen}</td>
+            <td style="text-align:right;">${r.cantidad.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td style="text-align:right;">${r.peso.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderBDTable() {
+      const tbody = document.getElementById('bodyBDTable');
+      tbody.innerHTML = '';
+      rawArticulos.forEach(a => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${a.nro}</td>
+            <td><strong>${a.codigo}</strong></td>
+            <td style="text-align:left;">${a.descripcion}</td>
+            <td>${a.almacen}</td>
+            <td>${a.unidad}</td>
+            <td>${a.armado}</td>
+            <td>${a.movimiento}</td>
+            <td><button class="btn-secondary" onclick="alert('Editar disponible próximamente')"><i class="fas fa-edit"></i></button></td>
+          </tr>
+        `;
+      });
+    }
+
+    function setPrimaryColor(color, el) {
+      document.documentElement.style.setProperty('--accent-blue', color);
+      document.querySelectorAll('.color-circle').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function sortTable(tableId, colIdx) {
+      const table = document.getElementById(tableId);
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      sortDirections[tableId] = !sortDirections[tableId];
+      const asc = sortDirections[tableId];
+
+      rows.sort((a, b) => {
+        const cellA = a.cells[colIdx]?.innerText.trim() || '';
+        const cellB = b.cells[colIdx]?.innerText.trim() || '';
+        const numA = parseFloat(cellA.replace(/\./g, '').replace(',', '.'));
+        const numB = parseFloat(cellB.replace(/\./g, '').replace(',', '.'));
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return asc ? numA - numB : numB - numA;
+        }
+        return asc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+      });
+
+      rows.forEach(r => tbody.appendChild(r));
+    }
+  </script>
+</body>
+</html>
