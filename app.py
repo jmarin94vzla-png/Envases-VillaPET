@@ -10,7 +10,10 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"Error al conectar con Supabase: {e}")
 
 MESES = {
     1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
@@ -25,7 +28,7 @@ def index():
 @app.route("/api/buscar_articulo/<nro>", methods=["GET"])
 def buscar_articulo(nro):
     if not supabase:
-        return jsonify({"error": "Supabase no configurado"}), 500
+        return jsonify({"exito": False, "error": "Supabase no está configurado"}), 500
     try:
         res = supabase.table("ARTICULOS").select("*").eq("NRO", int(nro)).execute()
         if res.data and len(res.data) > 0:
@@ -42,12 +45,12 @@ def buscar_articulo(nro):
         else:
             return jsonify({"exito": False, "mensaje": "Artículo no encontrado"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"exito": False, "error": str(e)}), 500
 
 @app.route("/api/guardar_ingreso", methods=["POST"])
 def guardar_ingreso():
     if not supabase:
-        return jsonify({"error": "Supabase no configurado"}), 500
+        return jsonify({"exito": False, "error": "Supabase no está configurado"}), 500
     
     data = request.json
     try:
@@ -77,7 +80,7 @@ def guardar_ingreso():
         res = supabase.table("INGRESO").insert(nuevo_registro).execute()
         return jsonify({"exito": True, "datos": res.data})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"exito": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
