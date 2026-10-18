@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify
-from supabase import create_client, Client
+import requests
 from datetime import datetime
 
 app = Flask(__name__)
@@ -8,12 +8,14 @@ app = Flask(__name__)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"Error al conectar con Supabase: {e}")
+# Cabeceras estándar para la API REST de Supabase
+def get_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
 
 MESES = {
     1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
@@ -25,14 +27,18 @@ MESES = {
 def index():
     return render_template("index.html")
 
+# Endpoint tipo "BUSCARV" consultando directamente la API de Supabase
 @app.route("/api/buscar_articulo/<nro>", methods=["GET"])
 def buscar_articulo(nro):
-    if not supabase:
+    if not SUPABASE_URL or not SUPABASE_KEY:
         return jsonify({"exito": False, "error": "Supabase no está configurado"}), 500
     try:
-        res = supabase.table("ARTICULOS").select("*").eq("NRO", int(nro)).execute()
-        if res.data and len(res.data) > 0:
-            articulo = res.data[0]
+        url = f"{SUPABASE_URL}/rest/v1/ARTICULOS?NRO=eq.{nro}&select=*"
+        response = requests.get(url, headers=get_headers())
+        data = response.json()
+        
+        if data and len(data) > 0:
+            articulo = data[0]
             return jsonify({
                 "exito": True,
                 "codigo": articulo.get("CODIGO", ""),
@@ -47,9 +53,10 @@ def buscar_articulo(nro):
     except Exception as e:
         return jsonify({"exito": False, "error": str(e)}), 500
 
+# Endpoint para guardar registros de INGRESO directamente en Supabase
 @app.route("/api/guardar_ingreso", methods=["POST"])
 def guardar_ingreso():
-    if not supabase:
+    if not SUPABASE_URL or not SUPABASE_KEY:
         return jsonify({"exito": False, "error": "Supabase no está configurado"}), 500
     
     data = request.json
@@ -77,8 +84,13 @@ def guardar_ingreso():
             "secuencia": int(data.get("secuencia", 1)) if data.get("secuencia") else None
         }
 
-        res = supabase.table("INGRESO").insert(nuevo_registro).execute()
-        return jsonify({"exito": True, "datos": res.data})
+        url = f"{SUPABASE_URL}/rest/v1/INGRESO"
+        response = requests.post(url, headers=get_headers(), json=nuevo_registro)
+        
+        if response.status_code in [200, 201]:
+            return jsonify({"exito": True, "datos": response.json()})
+        else:
+            return jsonify({"exito": False, "error": response.text}), 400
     except Exception as e:
         return jsonify({"exito": False, "error": str(e)}), 500
 
